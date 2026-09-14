@@ -504,6 +504,19 @@
                 <label style="display:block;font-size:13px;color:#555;font-weight:500;margin-bottom:6px;">任务名称（可选）：</label>
                 <input type="text" id="mergeTaskName" placeholder="例如：5月 WhatsApp 验证分流" maxlength="120" style="width:100%;padding:9px 10px;border:1px solid #d6dbe4;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;">
             </div>
+            <div style="margin-bottom: 10px;">
+                <label style="display:block;font-size:13px;color:#555;font-weight:500;margin-bottom:6px;">生成域名（可选）：</label>
+                <select id="mergeDomainSelect" style="width:100%;padding:9px 10px;border:1px solid #d6dbe4;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;">
+                    <option value="">自动使用当前站点</option>
+                    <option value="https://whttapp.dev">https://whttapp.dev</option>
+                    <option value="https://www.whttapp.dev">https://www.whttapp.dev</option>
+                    <option value="custom">手动输入自定义域名</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label style="display:block;font-size:13px;color:#555;font-weight:500;margin-bottom:6px;">自定义域名（可选）：</label>
+                <input type="text" id="mergeDomainCustom" placeholder="例如：https://abc.example.com" style="width:100%;padding:9px 10px;border:1px solid #d6dbe4;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;">
+            </div>
             <textarea id="mergeInput" rows="6" placeholder="输入链接，每行一个，例如：
 https://wa.me/123?text=START
 https://wa.me/456?text=START
@@ -641,7 +654,31 @@ https://wa.me/789?text=START" oninput="renderMergeLinkRows()"></textarea>
             : MIGRATION_CONFIG.legacyPublicBaseUrl;
         const SHORT_LINK_MODE = MIGRATION_CONFIG.useWorker ? 'worker' : 'legacy';
 
+        function normalizeBaseUrl(value) {
+            const trimmed = String(value || '').trim();
+            if (!trimmed) {
+                return PUBLIC_BASE_URL;
+            }
+
+            const normalized = /^https?:\/\//i.test(trimmed)
+                ? trimmed
+                : `https://${trimmed}`;
+
+            return normalized.replace(/\/+$/, '') + '/';
+        }
+
         function getBaseUrl() {
+            const domainSelect = document.getElementById('mergeDomainSelect');
+            const customDomainInput = document.getElementById('mergeDomainCustom');
+
+            if (domainSelect && domainSelect.value && domainSelect.value !== 'custom') {
+                return normalizeBaseUrl(domainSelect.value);
+            }
+
+            if (customDomainInput && customDomainInput.value.trim()) {
+                return normalizeBaseUrl(customDomainInput.value);
+            }
+
             return PUBLIC_BASE_URL;
         }
 
@@ -650,6 +687,46 @@ https://wa.me/789?text=START" oninput="renderMergeLinkRows()"></textarea>
             return SHORT_LINK_MODE === 'worker'
                 ? baseUrl.replace(/\/+$/, '') + '/' + id
                 : baseUrl + 'redirect.html#' + id;
+        }
+
+        function populateDomainOptions(domains = []) {
+            const select = document.getElementById('mergeDomainSelect');
+            if (!select) return;
+
+            const loweredDomains = Array.from(new Set(domains.map(domain => String(domain || '').trim()).filter(Boolean)));
+            const currentOrigin = window.location.origin;
+            const mergedDomains = Array.from(new Set([currentOrigin, ...loweredDomains]));
+            const previousValue = select.value || '';
+
+            select.innerHTML = '<option value="">自动使用当前站点</option>';
+            for (const domain of mergedDomains) {
+                if (!domain) continue;
+                const normalized = domain.replace(/\/+$/, '');
+                const option = document.createElement('option');
+                option.value = normalized;
+                option.textContent = normalized;
+                select.appendChild(option);
+            }
+            select.appendChild(new Option('手动输入自定义域名', 'custom'));
+
+            if (previousValue && previousValue !== 'custom' && mergedDomains.includes(previousValue)) {
+                select.value = previousValue;
+            } else {
+                select.value = '';
+            }
+        }
+
+        async function loadDomainOptions() {
+            const select = document.getElementById('mergeDomainSelect');
+            if (!select) return;
+
+            try {
+                const payload = await apiPost({ action: 'getDomainOptions' }, { skipStoredUser: true });
+                const serverDomains = Array.isArray(payload && payload.domains) ? payload.domains : [];
+                populateDomainOptions(serverDomains);
+            } catch (error) {
+                populateDomainOptions([]);
+            }
         }
 
         function getStoredUser() {
@@ -1502,6 +1579,7 @@ https://wa.me/789?text=START" oninput="renderMergeLinkRows()"></textarea>
         }
 
         setupQuotaButtons();
+        loadDomainOptions();
         restoreLogin();
     </script>
 </body>

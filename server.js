@@ -198,6 +198,8 @@ async function handleAction(action, payload, req) {
       return handleRegister(payload);
     case 'login':
       return handleLogin(payload);
+    case 'getDomainOptions':
+      return handleGetDomainOptions();
     case 'createSet':
       return handleCreateSet(payload, req);
     case 'listSets':
@@ -219,6 +221,37 @@ async function handleAction(action, payload, req) {
     default:
       throw httpError(400, 'Unsupported action');
   }
+}
+
+// ─── Domain options ──────────────────────────────────────────────────────────
+
+function getConfiguredDomains() {
+  const rawDomains = process.env.ALLOWED_DOMAINS || process.env.DOMAIN_OPTIONS || 'whttapp.dev,www.whttapp.dev';
+  const seen = new Set();
+  const domains = [];
+
+  for (const entry of rawDomains.split(',')) {
+    const trimmed = String(entry || '').trim();
+    if (!trimmed) continue;
+
+    const normalized = /^https?:\/\//i.test(trimmed)
+      ? trimmed.replace(/\/+$/, '')
+      : `https://${trimmed.replace(/\/+$/, '')}`;
+
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      domains.push(normalized);
+    }
+  }
+
+  return domains;
+}
+
+async function handleGetDomainOptions() {
+  return {
+    ok: true,
+    domains: getConfiguredDomains()
+  };
 }
 
 // ─── Auth: register ───────────────────────────────────────────────────────────
