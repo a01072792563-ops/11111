@@ -617,7 +617,7 @@ https://wa.me/789?text=START" oninput="renderMergeLinkRows()"></textarea>
     window.handleAuthAction = handleAuthAction;
         const MIGRATION_CONFIG = {
             useWorker: true,
-            workerBaseUrl: 'https://whttapp.dev',
+            workerBaseUrl: '',
             legacyScriptUrl: 'https://script.google.com/macros/s/AKfycbwMYWgW6oBK1VFGhQVfdMiaE-wJU8MSGNLqvwgqvTUPsQJyZswdC_LxKTmqrv8l7IVM/exec',
             legacyPublicBaseUrl: 'https://wshataps.org/'
         };
@@ -632,12 +632,12 @@ https://wa.me/789?text=START" oninput="renderMergeLinkRows()"></textarea>
         let historyLoaded = false;
         let historyHasMore = false;
 
-        const normalizedWorkerBaseUrl = MIGRATION_CONFIG.workerBaseUrl.replace(/\/+$/, '');
+        const detectedWorkerBaseUrl = (MIGRATION_CONFIG.workerBaseUrl || window.location.origin).replace(/\/+$/, '');
         const SCRIPT_URL = MIGRATION_CONFIG.useWorker
-            ? normalizedWorkerBaseUrl + '/api'
+            ? detectedWorkerBaseUrl + '/api'
             : MIGRATION_CONFIG.legacyScriptUrl;
         const PUBLIC_BASE_URL = MIGRATION_CONFIG.useWorker
-            ? normalizedWorkerBaseUrl + '/'
+            ? detectedWorkerBaseUrl + '/'
             : MIGRATION_CONFIG.legacyPublicBaseUrl;
         const SHORT_LINK_MODE = MIGRATION_CONFIG.useWorker ? 'worker' : 'legacy';
 
