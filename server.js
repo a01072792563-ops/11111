@@ -703,8 +703,8 @@ function scheduleAccessMetrics(payload) {
 async function recordAccessMetrics(payload) {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-
+    // Metrics writes are best-effort background work, so avoid an extra explicit
+    // transaction here to reduce latency on the redirect hot path.
     if (payload.bumpClickCount !== false) {
       await client.query(
         'UPDATE link_sets SET click_count = COALESCE(click_count, 0) + 1, updated_at = $1 WHERE id = $2',
@@ -723,14 +723,7 @@ async function recordAccessMetrics(payload) {
       'INSERT INTO click_logs (log_id, set_id, link_index, url, clicked_at, ua, ref, ip_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
       [payload.logId, payload.id, payload.index, payload.url, payload.now, payload.ua, payload.ref, payload.ipHash]
     );
-
-    await client.query('COMMIT');
   } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      // Ignore rollback failures for async metrics writes.
-    }
     throw error;
   } finally {
     client.release();
