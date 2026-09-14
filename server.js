@@ -46,10 +46,17 @@ async function verifyPassword(password, stored) {
   );
 }
 
-// ─── UUID ─────────────────────────────────────────────────────────────────────
+// ─── Short ID generation ──────────────────────────────────────────────────────
 
 function newId() {
-  return crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+  let id = '';
+
+  for (let i = 0; i < 6; i += 1) {
+    id += alphabet[crypto.randomInt(alphabet.length)];
+  }
+
+  return id;
 }
 
 // ─── Express app ─────────────────────────────────────────────────────────────

@@ -345,7 +345,7 @@ async function createSet(env, payload, access) {
     const userId = access.mode === 'user' ? Number(access.user.id) : null;
     const id = access.mode === 'owner'
         ? await createScopedSetId(env, access.owner.code)
-        : sanitizeId(payload.id || crypto.randomUUID().replace(/-/g, '').slice(0, 8));
+        : sanitizeId(payload.id || generateShortAlphaId());
 
     if (access.mode !== 'owner') {
         const exists = await env.DB.prepare('SELECT id FROM link_sets WHERE id = ?').bind(id).first();
@@ -916,6 +916,17 @@ async function readJson(request) {
     } catch {
         throw httpError(400, 'Invalid JSON payload');
     }
+}
+
+function generateShortAlphaId(length = 6) {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    let id = '';
+
+    for (let i = 0; i < length; i += 1) {
+        id += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+
+    return id;
 }
 
 function sanitizeId(value) {
